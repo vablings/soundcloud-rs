@@ -10,10 +10,9 @@ documentation = "https://mkroman.github.io/soundcloud/"
 
 [dependencies]
 env_logger = "0.3.3"
-hyper = "0.9.4"
 log = "0.3.6"
-serde = "0.7.0"
-serde_json = "0.7.0"
-serde_macros = "0.7.2"
+serde = "1.0"
+serde_derive = "1.0"
+serde_json = "1.0"
+reqwest = "0.8.2"
 url = "1.0.0"
-

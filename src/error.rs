@@ -12,7 +12,7 @@ use std::fmt;
 use std::result;
 use std::io;
 
-use hyper;
+use reqwest;
 use serde_json;
 
 pub type Result<T> = result::Result<T, Error>;
@@ -21,7 +21,7 @@ pub type Result<T> = result::Result<T, Error>;
 pub enum Error {
     ApiError(String),
     JsonError(serde_json::Error),
-    HttpError(hyper::Error),
+    HttpError(reqwest::Error),
     InvalidFilter(String),
     Io(io::Error),
     TrackNotDownloadable,
@@ -65,8 +65,8 @@ impl error::Error for Error {
     }
 }
 
-impl From<hyper::Error> for Error {
-    fn from(error: hyper::Error) -> Error {
+impl From<reqwest::Error> for Error {
+    fn from(error: reqwest::Error) -> Error {
         Error::HttpError(error)
     }
 }

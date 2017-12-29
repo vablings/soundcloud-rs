@@ -8,7 +8,7 @@
 // except according to those terms.
 
 use url::Url;
-use hyper;
+use reqwest;
 
 use std::result;
 use std::borrow::Borrow;
@@ -22,92 +22,7 @@ pub type Params<'a, K, V> = &'a [(K, V)];
 #[derive(Debug)]
 pub struct Client {
     client_id: String,
-    http_client: hyper::Client,
-}
-
-/// Registered client application.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct App {
-    /// Integer ID.
-    pub id: usize,
-    /// API resource URL.
-    pub uri: String,
-    /// URL to the SoundCloud.com page
-    pub permalink_url: String,
-    /// URL to an external site.
-    pub external_url: String,
-    /// Username of the app creator.
-    pub creator: Option<String>,
-}
-
-/// User comment.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct Comment {
-    /// Integer ID.
-    pub id: usize,
-    /// API resource URL.
-    pub uri: String,
-    /// Time of creation, as an unparsed string.
-    pub created_at: String,
-    /// HTML comment body.
-    pub body: String,
-    /// Associated timestamp in milliseconds.
-    pub timestamp: Option<usize>,
-    /// User ID of the commenter.
-    pub user_id: usize,
-    /// Small representation of the commenters user.
-    pub user: User,
-    /// The track ID of the related track.
-    pub track_id: usize,
-}
-
-/// Registered user.
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct User {
-    /// Integer ID.
-    pub id: usize,
-    /// Permalink of the resource.
-    pub permalink: String,
-    /// Username.
-    pub username: String,
-    /// API resource URL.
-    pub uri: String,
-    /// URL to the SoundCloud.com page.
-    pub permalink_url: String,
-    /// URL to a JPEG image.
-    pub avatar_url: String,
-    /// Country.
-    pub country: Option<String>,
-    /// First and last name.
-    pub full_name: Option<String>,
-    /// City.
-    pub city: Option<String>,
-    /// Description, written by the user.
-    pub description: Option<String>,
-    /// Discogs name.
-    #[serde(rename="discogs-name")]
-    pub discogs_name: Option<String>, // discogs-name
-    /// MySpace name.
-    #[serde(rename="myspace-name")]
-    pub myspace_name: Option<String>, // myspace-name
-    /// URL to a website.
-    pub website: Option<String>,
-    /// Custom title for the website.
-    #[serde(rename="website-title")]
-    pub website_title: Option<String>, // website-title
-    /// Online status.
-    pub online: Option<bool>,
-    /// Number of public tracks.
-    pub track_count: Option<usize>,
-    /// Number of public playlists.
-    pub playlist_count: Option<usize>,
-    /// Number of followers.
-    pub followers_count: Option<usize>,
-    /// Number of followed users.
-    pub followings_count: Option<usize>,
-    /// Number of favorited public tracks.
-    pub public_favorites_count: Option<usize>,
-    // pub avatar_data …
+    http_client: reqwest::Client,
 }
 
 impl Client {
@@ -121,8 +36,9 @@ impl Client {
     /// let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
     /// ```
     pub fn new(client_id: &str) -> Client {
-        let mut client = hyper::Client::new();
-        client.set_redirect_policy(hyper::client::RedirectPolicy::FollowNone);
+        let client = reqwest::ClientBuilder::new()
+            .redirect(reqwest::RedirectPolicy::none())
+            .build().unwrap();
 
         Client {
             client_id: client_id.to_owned(),
@@ -156,7 +72,7 @@ impl Client {
     /// assert!(!buffer.is_empty());
     /// ```
     pub fn get<I, K, V>(&self, path: &str, params: Option<I>)
-        -> result::Result<hyper::client::Response, hyper::Error>
+        -> result::Result<reqwest::Response, reqwest::Error>
     where I: IntoIterator, I::Item: Borrow<(K, V)>, K: AsRef<str>, V: AsRef<str> {
         let mut url = Url::parse(&format!("https://{}{}", super::API_HOST, path)).unwrap();
 
@@ -174,7 +90,7 @@ impl Client {
     }
 
     pub fn download<W: Write>(&self, track: &Track, mut writer: W) -> Result<usize> {
-        use hyper::header::Location;
+        use reqwest::header::Location;
 
         if !track.downloadable || !track.download_url.is_some() {
             return Err(Error::TrackNotDownloadable);
@@ -184,7 +100,7 @@ impl Client {
         let mut response = try!(self.http_client.get(url).send());
 
         // Follow the redirect just this once.
-        if let Some(header) = response.headers.get::<Location>().cloned() {
+        if let Some(header) = response.headers().get::<Location>().cloned() {
             let url = Url::parse(&header).unwrap();
             response = try!(self.http_client.get(url).send());
         }
@@ -195,7 +111,7 @@ impl Client {
     /// Starts streaming the track provided in the tracks `stream_url` to the `writer` if the track
     /// is streamable via the API.
     pub fn stream<W: Write>(&self, track: &Track, mut writer: W) -> Result<usize> {
-        use hyper::header::Location;
+        use reqwest::header::Location;
 
         if !track.streamable || !track.stream_url.is_some() {
             return Err(Error::TrackNotStreamable);
@@ -205,7 +121,7 @@ impl Client {
         let mut response = try!(self.http_client.get(url).send());
 
         // Follow the redirect just this once.
-        if let Some(header) = response.headers.get::<Location>().cloned() {
+        if let Some(header) = response.headers().get::<Location>().cloned() {
             let url = Url::parse(&header).unwrap();
             response = try!(self.http_client.get(url).send());
         }
@@ -215,10 +131,10 @@ impl Client {
 
     /// Resolves any soundcloud resource and returns it as a `Url`.
     pub fn resolve(&self, url: &str) -> Result<Url> {
-        use hyper::header::Location;
+        use reqwest::header::Location;
         let response = try!(self.get("/resolve", Some(&[("url", url)])));
 
-        if let Some(header) = response.headers.get::<Location>() {
+        if let Some(header) = response.headers().get::<Location>() {
             Ok(Url::parse(header).unwrap())
         } else {
             Err(Error::ApiError("expected location header".to_owned()))
@@ -276,10 +192,10 @@ mod tests {
 
     #[test]
     fn test_resolve_track() {
-        let result = client().resolve("https://soundcloud.com/isqa/tree-eater-1");
+        let result = client().resolve("https://soundcloud.com/maxjoehnk/invites-feat-maks-warm-up-mix");
 
         assert_eq!(result.unwrap(),
-            Url::parse(&format!("https://api.soundcloud.com/tracks/262976655?client_id={}", 
+            Url::parse(&format!("https://api.soundcloud.com/tracks/330733497?client_id={}",
                                 env!("SOUNDCLOUD_CLIENT_ID"))).unwrap());
     }
 

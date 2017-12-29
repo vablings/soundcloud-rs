@@ -14,7 +14,9 @@ use url::Url;
 use serde_json;
 
 use error::{Error, Result};
-use client::{Client, User, App};
+use client::Client;
+use user::User;
+use app::App;
 
 #[derive(Debug)]
 pub enum Filter {
