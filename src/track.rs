@@ -132,7 +132,7 @@ pub struct Track {
     /// Key.
     pub key_signature: Option<String>,
     /// Number of comments.
-    pub comment_count: u64,
+    pub comment_count: Option<u64>,
     /// Number of downloads.
     pub download_count: u64,
     /// Number of playbacks.

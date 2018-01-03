@@ -15,13 +15,16 @@ use std::borrow::Borrow;
 use std::io::{self, Write};
 
 use track::{Track, TrackRequestBuilder, SingleTrackRequestBuilder};
+use playlist::Playlist;
 use error::{Error, Result};
+use serde_json;
 
 pub type Params<'a, K, V> = &'a [(K, V)];
 
 #[derive(Debug)]
 pub struct Client {
     client_id: String,
+    auth_token: Option<String>,
     http_client: reqwest::Client,
 }
 
@@ -43,12 +46,17 @@ impl Client {
         Client {
             client_id: client_id.to_owned(),
             http_client: client,
+            auth_token: None,
         }
     }
 
     /// Returns the client id.
     pub fn client_id(&self) -> &str {
         &self.client_id
+    }
+
+    pub fn authenticate_with_token(&mut self, token: String) {
+        self.auth_token = Some(token);
     }
 
     /// Creates and sends a HTTP GET request to the API endpoint.
@@ -85,7 +93,17 @@ impl Client {
             }
         }
 
-        let response = self.http_client.get(url).send();
+        let mut headers = reqwest::header::Headers::new();
+
+        if self.auth_token.is_some() {
+            let token = self.auth_token.clone().unwrap();
+            headers.set(reqwest::header::Authorization(format!("OAuth {}", token)));
+        }
+
+        let response = self.http_client
+            .get(url)
+            .headers(headers)
+            .send();
         response
     }
 
@@ -173,6 +191,13 @@ impl Client {
         TrackRequestBuilder::new(self)
     }
 
+    pub fn playlists(&self) -> Result<Vec<Playlist>> {
+        let params = Some(vec![("limit", "1000")]);
+        let res = self.get("/me/playlists", params)?;
+        let playlists: Vec<Playlist> = serde_json::from_reader(res)?;
+        Ok(playlists)
+    }
+
     /// Parses a string and returns a url with the client_id query parameter set.
     fn parse_url<S: AsRef<str>>(&self, url: S) -> Url {
         let mut url = Url::parse(url.as_ref()).unwrap();
@@ -188,6 +213,13 @@ mod tests {
 
     fn client() -> Client {
         Client::new(env!("SOUNDCLOUD_CLIENT_ID"))
+    }
+
+    #[test]
+    fn test_fetch_playlists() {
+        let mut client = client();
+        client.authenticate_with_token(env!("SOUNDCLOUD_AUTH_TOKEN").to_owned());
+        assert!(client.playlists().unwrap().len() > 0);
     }
 
     #[test]
