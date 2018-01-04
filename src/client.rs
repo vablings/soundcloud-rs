@@ -16,6 +16,7 @@ use std::io::{self, Write};
 
 use track::{Track, TrackRequestBuilder, SingleTrackRequestBuilder};
 use playlist::Playlist;
+use like::Like;
 use error::{Error, Result};
 use serde_json;
 
@@ -198,6 +199,13 @@ impl Client {
         Ok(playlists)
     }
 
+    pub fn likes(&self) -> Result<Vec<Like>> {
+        let params = Some(vec![("limit", "1000")]);
+        let res = self.get("/e1/me/likes", params)?;
+        let likes: Vec<Like> = serde_json::from_reader(res)?;
+        Ok(likes)
+    }
+
     /// Parses a string and returns a url with the client_id query parameter set.
     fn parse_url<S: AsRef<str>>(&self, url: S) -> Url {
         let mut url = Url::parse(url.as_ref()).unwrap();
@@ -220,6 +228,13 @@ mod tests {
         let mut client = client();
         client.authenticate_with_token(env!("SOUNDCLOUD_AUTH_TOKEN").to_owned());
         assert!(client.playlists().unwrap().len() > 0);
+    }
+
+    #[test]
+    fn test_fetch_likes() {
+        let mut client = client();
+        client.authenticate_with_token(env!("SOUNDCLOUD_AUTH_TOKEN").to_owned());
+        assert!(client.likes().unwrap().len() > 0);
     }
 
     #[test]

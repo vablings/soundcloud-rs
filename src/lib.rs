@@ -29,6 +29,7 @@ mod user;
 mod comment;
 mod app;
 mod playlist;
+mod like;
 
 // Re-export commonly used resources.
 pub use track::Track;
@@ -38,3 +39,4 @@ pub use app::App;
 pub use client::Client;
 pub use error::Error;
 pub use playlist::Playlist;
+pub use like::Like;

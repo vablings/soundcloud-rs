@@ -18,7 +18,7 @@ pub enum PlaylistSharing {
 #[derive(Debug, Clone, Deserialize)]
 pub struct Playlist {
     pub duration: u64,
-    pub release_day: Option<String>,
+    pub release_day: Option<i32>,
     pub permalink_url: String,
     pub permalink: String,
     pub purchase_url: Option<String>,
