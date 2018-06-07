@@ -1,10 +1,10 @@
 [package]
 name = "soundcloud"
-authors = ["Mikkel Kroman <mk@uplink.io>"]
-version = "0.1.0"
+authors = ["Mikkel Kroman <mk@uplink.io>", "Max Jöhnk <maxjoehnk@gmail.com>"]
+version = "0.2.0"
 license = "MIT/Apache-2.0"
 keywords = ["soundcloud", "http", "api", "client"]
-repository = "https://github.com/mkroman/soundcloud"
+repository = "https://github.com/maxjoehnk/soundcloud-rs"
 description = "SoundCloud API implementation in Rust"
 documentation = "https://mkroman.github.io/soundcloud/"
 
@@ -15,4 +15,4 @@ serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
 reqwest = "0.8.2"
-url = "1.0.0"
+url = "1.7"
