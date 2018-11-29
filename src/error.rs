@@ -22,6 +22,7 @@ pub enum Error {
     ApiError(String),
     JsonError(serde_json::Error),
     HttpError(reqwest::Error),
+    HttpHeaderError(reqwest::header::ToStrError),
     InvalidFilter(String),
     Io(io::Error),
     TrackNotDownloadable,
@@ -33,6 +34,7 @@ impl fmt::Display for Error {
         match *self {
             Error::JsonError(ref error) => write!(f, "JSON error: {}", error),
             Error::HttpError(ref error) => write!(f, "HTTP error: {}", error),
+            Error::HttpHeaderError(ref error) => write!(f, "HTTP error: {}", error),
             Error::ApiError(ref error) => write!(f, "SoundCloud error: {}", error),
             Error::Io(ref error) => write!(f, "IO error: {}", error),
             Error::InvalidFilter(_) => write!(f, "Invalid filter"),
@@ -48,6 +50,7 @@ impl error::Error for Error {
             Error::InvalidFilter(_) => "invalid filter",
             Error::ApiError(_) => "api error",
             Error::HttpError(ref error) => error.description(),
+            Error::HttpHeaderError(ref error) => error.description(),
             Error::JsonError(ref error) => error.description(),
             Error::TrackNotStreamable => "track is not streamable",
             Error::TrackNotDownloadable => "track is not downloadable",
@@ -80,5 +83,11 @@ impl From<serde_json::Error> for Error {
 impl From<io::Error> for Error {
     fn from(error: io::Error) -> Error {
         Error::Io(error)
+    }
+}
+
+impl From<reqwest::header::ToStrError> for Error {
+    fn from(error: reqwest::header::ToStrError) -> Error {
+        Error::HttpHeaderError(error)
     }
 }

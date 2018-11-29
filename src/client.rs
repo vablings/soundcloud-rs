@@ -94,11 +94,11 @@ impl Client {
             }
         }
 
-        let mut headers = reqwest::header::Headers::new();
+        let mut headers = reqwest::header::HeaderMap::new();
 
         if self.auth_token.is_some() {
             let token = self.auth_token.clone().unwrap();
-            headers.set(reqwest::header::Authorization(format!("OAuth {}", token)));
+            headers.insert(reqwest::header::AUTHORIZATION, format!("OAuth {}", token).parse().unwrap());
         }
 
         let response = self.http_client
@@ -109,52 +109,52 @@ impl Client {
     }
 
     pub fn download<W: Write>(&self, track: &Track, mut writer: W) -> Result<usize> {
-        use reqwest::header::Location;
+        use reqwest::header::LOCATION;
 
         if !track.downloadable || !track.download_url.is_some() {
             return Err(Error::TrackNotDownloadable);
         }
 
         let url = self.parse_url(track.download_url.as_ref().unwrap());
-        let mut response = try!(self.http_client.get(url).send());
+        let mut response = self.http_client.get(url).send()?;
 
         // Follow the redirect just this once.
-        if let Some(header) = response.headers().get::<Location>().cloned() {
-            let url = Url::parse(&header).unwrap();
-            response = try!(self.http_client.get(url).send());
+        if let Some(header) = response.headers().get(LOCATION).cloned() {
+            let url = Url::parse(header.to_str()?).unwrap();
+            response = self.http_client.get(url).send()?;
         }
 
-        try!(io::copy(&mut response, &mut writer).map(|n| Ok(n as usize)))
+        io::copy(&mut response, &mut writer).map(|n| Ok(n as usize))?
     }
 
     /// Starts streaming the track provided in the tracks `stream_url` to the `writer` if the track
     /// is streamable via the API.
     pub fn stream<W: Write>(&self, track: &Track, mut writer: W) -> Result<usize> {
-        use reqwest::header::Location;
+        use reqwest::header::LOCATION;
 
         if !track.streamable || !track.stream_url.is_some() {
             return Err(Error::TrackNotStreamable);
         }
 
         let url = self.parse_url(track.stream_url.as_ref().unwrap());
-        let mut response = try!(self.http_client.get(url).send());
+        let mut response = self.http_client.get(url).send()?;
 
         // Follow the redirect just this once.
-        if let Some(header) = response.headers().get::<Location>().cloned() {
-            let url = Url::parse(&header).unwrap();
-            response = try!(self.http_client.get(url).send());
+        if let Some(header) = response.headers().get(LOCATION).cloned() {
+            let url = Url::parse(header.to_str()?).unwrap();
+            response = self.http_client.get(url).send()?;
         }
 
-        try!(io::copy(&mut response, &mut writer).map(|n| Ok(n as usize)))
+        io::copy(&mut response, &mut writer).map(|n| Ok(n as usize))?
     }
 
     /// Resolves any soundcloud resource and returns it as a `Url`.
     pub fn resolve(&self, url: &str) -> Result<Url> {
-        use reqwest::header::Location;
-        let response = try!(self.get("/resolve", Some(&[("url", url)])));
+        use reqwest::header::LOCATION;
+        let response = self.get("/resolve", Some(&[("url", url)]))?;
 
-        if let Some(header) = response.headers().get::<Location>() {
-            Ok(Url::parse(header).unwrap())
+        if let Some(header) = response.headers().get(LOCATION) {
+            Ok(Url::parse(header.to_str()?).unwrap())
         } else {
             Err(Error::ApiError("expected location header".to_owned()))
         }
