@@ -239,7 +239,7 @@ mod tests {
 
     #[test]
     fn test_resolve_track() {
-        let result = client().resolve("https://soundcloud.com/maxjoehnk/invites-feat-maks-warm-up-mix");
+        let result = client().resolve("https://soundcloud.com/djmaksgermany/invites-feat-maks-warm-up-mix");
 
         assert_eq!(result.unwrap(),
             Url::parse(&format!("https://api.soundcloud.com/tracks/330733497?client_id={}",
