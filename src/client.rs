@@ -193,14 +193,14 @@ impl Client {
     }
 
     pub fn playlists(&self) -> Result<Vec<Playlist>> {
-        let params = Some(vec![("limit", "1000")]);
+        let params = Some(vec![("limit", "500")]);
         let res = self.get("/me/playlists", params)?;
         let playlists: Vec<Playlist> = serde_json::from_reader(res)?;
         Ok(playlists)
     }
 
     pub fn likes(&self) -> Result<Vec<Like>> {
-        let params = Some(vec![("limit", "1000")]);
+        let params = Some(vec![("limit", "500")]);
         let res = self.get("/e1/me/likes", params)?;
         let likes: Vec<Like> = serde_json::from_reader(res)?;
         Ok(likes)
