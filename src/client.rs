@@ -233,7 +233,7 @@ impl Client {
 
     pub fn likes(&self) -> Result<Vec<Like>> {
         let params = Some(vec![("limit", "500")]);
-        let res = self.get("/e1/me/likes", params)?;
+        let res = self.get("/me/favorites", params)?;
         let likes: Vec<Like> = serde_json::from_reader(res)?;
         Ok(likes)
     }
