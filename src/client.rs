@@ -248,7 +248,7 @@ mod tests {
 
     #[test]
     fn test_get_tracks() {
-        let result = client().tracks().query(Some("d0df0dt snuffx")).get();
+        let result = client().tracks().query(Some("monstercat")).get();
 
         assert!(result.unwrap().is_some());
     }
