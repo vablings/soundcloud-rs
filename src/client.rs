@@ -15,7 +15,7 @@ use std::borrow::Borrow;
 use std::io::{self, Write};
 
 use track::{Track, TrackRequestBuilder, SingleTrackRequestBuilder};
-use playlist::Playlist;
+use playlist::{Playlist, PlaylistRequestBuilder, SinglePlaylistRequestBuilder};
 use like::Like;
 use error::{Error, Result};
 use serde_json;
@@ -192,7 +192,39 @@ impl Client {
         TrackRequestBuilder::new(self)
     }
 
-    pub fn playlists(&self) -> Result<Vec<Playlist>> {
+    /// Returns a builder for a single playlist-by-id request.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use soundcloud::Client;
+    ///
+    /// let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
+    /// let playlist = client.playlist(965640322).get();
+    ///
+    /// assert_eq!(playlist.unwrap().id, 965640322);
+    /// ```
+    pub fn playlist(&self, id: usize) -> SinglePlaylistRequestBuilder {
+        SinglePlaylistRequestBuilder::new(self, id)
+    }
+
+    /// Returns a builder for searching playlists with multiple criteria.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use soundcloud::Client;
+    ///
+    /// let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
+    /// let playlists = client.playlists().query("Monstercat").get();
+    ///
+    /// assert!(playlists.unwrap().expect("no playlists found").len() > 0);
+    /// ```
+    pub fn playlists(&self) -> PlaylistRequestBuilder {
+        PlaylistRequestBuilder::new(self)
+    }
+
+    pub fn user_playlists(&self) -> Result<Vec<Playlist>> {
         let params = Some(vec![("limit", "500")]);
         let res = self.get("/me/playlists", params)?;
         let playlists: Vec<Playlist> = serde_json::from_reader(res)?;
@@ -227,7 +259,7 @@ mod tests {
     fn test_fetch_playlists() {
         let mut client = client();
         client.authenticate_with_token(env!("SOUNDCLOUD_AUTH_TOKEN").to_owned());
-        assert!(client.playlists().unwrap().len() > 0);
+        assert!(client.user_playlists().unwrap().len() > 0);
     }
 
     #[test]
@@ -258,6 +290,20 @@ mod tests {
         let track = client().tracks().id(18201932).get().unwrap();
 
         assert_eq!(track.id, 18201932);
+    }
+
+    #[test]
+    fn test_get_playlists() {
+        let result = client().playlists().query("monstercat").get();
+
+        assert!(result.unwrap().is_some());
+    }
+
+    #[test]
+    fn test_get_playlist() {
+        let playlist = client().playlist(965640322).get().unwrap();
+
+        assert_eq!(playlist.id, 965640322);
     }
 
     #[test]
