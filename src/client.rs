@@ -16,7 +16,6 @@ use std::io::{self, Write};
 
 use track::{Track, TrackRequestBuilder, SingleTrackRequestBuilder};
 use playlist::{Playlist, PlaylistRequestBuilder, SinglePlaylistRequestBuilder};
-use like::Like;
 use error::{Error, Result};
 use serde_json;
 
@@ -231,10 +230,10 @@ impl Client {
         Ok(playlists)
     }
 
-    pub fn likes(&self) -> Result<Vec<Like>> {
+    pub fn likes(&self) -> Result<Vec<Track>> {
         let params = Some(vec![("limit", "500")]);
         let res = self.get("/me/favorites", params)?;
-        let likes: Vec<Like> = serde_json::from_reader(res)?;
+        let likes: Vec<Track> = serde_json::from_reader(res)?;
         Ok(likes)
     }
 
