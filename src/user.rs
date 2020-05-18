@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 /// Registered user.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {

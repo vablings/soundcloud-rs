@@ -10,14 +10,15 @@
 //!
 //! This soundcloud library provides an interface where you can query soundcloud for information
 //! about tracks and users.
-extern crate url;
-extern crate reqwest;
-#[macro_use]
-extern crate log;
-extern crate serde;
-extern crate serde_json;
-#[macro_use]
-extern crate serde_derive;
+
+pub use crate::app::App;
+pub use crate::client::Client;
+pub use crate::comment::Comment;
+pub use crate::error::Error;
+pub use crate::playlist::Playlist;
+// Re-export commonly used resources.
+pub use crate::track::Track;
+pub use crate::user::User;
 
 /// The static host address for the API.
 pub const API_HOST: &'static str = "api.soundcloud.com";
@@ -30,11 +31,3 @@ mod comment;
 mod app;
 mod playlist;
 
-// Re-export commonly used resources.
-pub use track::Track;
-pub use user::User;
-pub use comment::Comment;
-pub use app::App;
-pub use client::Client;
-pub use error::Error;
-pub use playlist::Playlist;

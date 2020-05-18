@@ -1,4 +1,6 @@
-use user::User;
+use serde::{Deserialize, Serialize};
+
+use crate::user::User;
 
 /// User comment.
 #[derive(Serialize, Deserialize, Debug, Clone)]

@@ -1,8 +1,10 @@
+use serde::Deserialize;
 use url::Url;
-use client::Client;
-use error::{Error, Result};
-use track::Track;
-use user::User;
+
+use crate::client::Client;
+use crate::error::{Error, Result};
+use crate::track::Track;
+use crate::user::User;
 
 #[derive(Debug, Clone, Deserialize)]
 pub enum PlaylistKind {
@@ -59,10 +61,10 @@ impl<'a> SinglePlaylistRequestBuilder<'a> {
     }
 
     /// Sends the request and return the tracks.
-    pub fn get(&mut self) -> Result<Playlist> {
+    pub async fn get(&mut self) -> Result<Playlist> {
         let no_params: Option<&[(&str, &str)]> = None;
-        let response = try!(self.client.get(&format!("/playlists/{}", self.id), no_params));
-        let track: Playlist = try!(serde_json::from_reader(response));
+        let response = self.client.get(&format!("/playlists/{}", self.id), no_params).await?;
+        let track: Playlist = response.json().await?;
 
         Ok(track)
     }
@@ -100,11 +102,11 @@ impl<'a> PlaylistRequestBuilder<'a> {
 
     /// Performs the request and returns a list of playlists if there are any results, None otherwise,
     /// or an error if one occurred.
-    pub fn get(&mut self) -> Result<Option<Vec<Playlist>>> {
+    pub async fn get(&mut self) -> Result<Option<Vec<Playlist>>> {
         use serde_json::Value;
 
-        let response = try!(self.client.get("/playlists", Some(self.request_params())));
-        let playlist_list: Value = try!(serde_json::from_reader(response));
+        let response = self.client.get("/playlists", Some(self.request_params())).await?;
+        let playlist_list: Value = response.json().await?;
 
         if let Some(playlist_list) = playlist_list.as_array() {
             if playlist_list.is_empty() {

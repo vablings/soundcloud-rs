@@ -9,8 +9,8 @@
 
 use std::error;
 use std::fmt;
-use std::result;
 use std::io;
+use std::result;
 
 use reqwest;
 use serde_json;
@@ -58,7 +58,7 @@ impl error::Error for Error {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             Error::JsonError(ref error) => Some(error),
             Error::HttpError(ref error) => Some(error),

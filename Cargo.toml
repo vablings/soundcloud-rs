@@ -1,18 +1,20 @@
 [package]
 name = "soundcloud"
 authors = ["Mikkel Kroman <mk@uplink.io>", "Max Jöhnk <maxjoehnk@gmail.com>"]
-version = "0.3.0"
+version = "0.4.0"
 license = "MIT/Apache-2.0"
 keywords = ["soundcloud", "http", "api", "client"]
 repository = "https://github.com/maxjoehnk/soundcloud-rs"
 description = "SoundCloud API implementation in Rust"
-documentation = "https://mkroman.github.io/soundcloud/"
+edition = "2018"
 
 [dependencies]
-env_logger = "0.3.3"
-log = "0.3.6"
-serde = "1.0"
-serde_derive = "1.0"
+log = "0.3"
+serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-reqwest = "0.9"
-url = "1.7"
+reqwest = { version = "0.10", features = ["json", "stream"] }
+url = "2.1"
+futures = "0.3"
+
+[dev-dependencies]
+tokio = { version = "0.2", features = ["macros", "rt-threaded"]}

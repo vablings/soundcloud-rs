@@ -7,19 +7,14 @@
 // option. This file may not be copied, modified, or distributed
 // except according to those terms.
 
-use url::Url;
-use reqwest;
-
-use std::result;
 use std::borrow::Borrow;
-use std::io::{self, Write};
+use std::result;
 
-use track::{Track, TrackRequestBuilder, SingleTrackRequestBuilder};
-use playlist::{Playlist, PlaylistRequestBuilder, SinglePlaylistRequestBuilder};
-use error::{Error, Result};
-use serde_json;
+use url::Url;
 
-pub type Params<'a, K, V> = &'a [(K, V)];
+use crate::error::{Error, Result};
+use crate::playlist::{Playlist, PlaylistRequestBuilder, SinglePlaylistRequestBuilder};
+use crate::track::{SingleTrackRequestBuilder, Track, TrackRequestBuilder};
 
 #[derive(Debug)]
 pub struct Client {
@@ -40,7 +35,7 @@ impl Client {
     /// ```
     pub fn new(client_id: &str) -> Client {
         let client = reqwest::ClientBuilder::new()
-            .redirect(reqwest::RedirectPolicy::none())
+            .redirect(reqwest::redirect::Policy::none())
             .build().unwrap();
 
         Client {
@@ -70,18 +65,21 @@ impl Client {
     /// ```
     /// use std::io::Read;
     /// use soundcloud::Client;
-    /// let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
-    /// let response = client.get("/resolve", Some(&[("url",
-    /// "https://soundcloud.com/firepowerrecs/afk-shellshock-kamikaze-promo-mix-lock-load-series-vol-20")]));
     ///
-    /// let mut buffer = String::new();
-    /// response.unwrap().read_to_string(&mut buffer);
+    /// #[tokio::main]
+    /// async fn main() {
+    ///   let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
+    ///   let response = client.get("/resolve", Some(&[("url",
+    ///   "https://soundcloud.com/firepowerrecs/afk-shellshock-kamikaze-promo-mix-lock-load-series-vol-20")])).await;
     ///
-    /// assert!(!buffer.is_empty());
+    ///   let buffer = response.unwrap().text().await.unwrap();
+    ///
+    ///   assert!(!buffer.is_empty());
+    ///}
     /// ```
-    pub fn get<I, K, V>(&self, path: &str, params: Option<I>)
-        -> result::Result<reqwest::Response, reqwest::Error>
-    where I: IntoIterator, I::Item: Borrow<(K, V)>, K: AsRef<str>, V: AsRef<str> {
+    pub async fn get<I, K, V>(&self, path: &str, params: Option<I>)
+                              -> result::Result<reqwest::Response, reqwest::Error>
+        where I: IntoIterator, I::Item: Borrow<(K, V)>, K: AsRef<str>, V: AsRef<str> {
         let mut url = Url::parse(&format!("https://{}{}", super::API_HOST, path)).unwrap();
 
         {
@@ -103,54 +101,57 @@ impl Client {
         let response = self.http_client
             .get(url)
             .headers(headers)
-            .send();
+            .send()
+            .await;
         response
     }
 
-    pub fn download<W: Write>(&self, track: &Track, mut writer: W) -> Result<usize> {
-        use reqwest::header::LOCATION;
-
-        if !track.downloadable || !track.download_url.is_some() {
-            return Err(Error::TrackNotDownloadable);
-        }
-
-        let url = self.parse_url(track.download_url.as_ref().unwrap());
-        let mut response = self.http_client.get(url).send()?;
-
-        // Follow the redirect just this once.
-        if let Some(header) = response.headers().get(LOCATION).cloned() {
-            let url = Url::parse(header.to_str()?).unwrap();
-            response = self.http_client.get(url).send()?;
-        }
-
-        io::copy(&mut response, &mut writer).map(|n| Ok(n as usize))?
-    }
-
-    /// Starts streaming the track provided in the tracks `stream_url` to the `writer` if the track
-    /// is streamable via the API.
-    pub fn stream<W: Write>(&self, track: &Track, mut writer: W) -> Result<usize> {
-        use reqwest::header::LOCATION;
-
-        if !track.streamable || !track.stream_url.is_some() {
-            return Err(Error::TrackNotStreamable);
-        }
-
-        let url = self.parse_url(track.stream_url.as_ref().unwrap());
-        let mut response = self.http_client.get(url).send()?;
-
-        // Follow the redirect just this once.
-        if let Some(header) = response.headers().get(LOCATION).cloned() {
-            let url = Url::parse(header.to_str()?).unwrap();
-            response = self.http_client.get(url).send()?;
-        }
-
-        io::copy(&mut response, &mut writer).map(|n| Ok(n as usize))?
-    }
+    // TODO: fix download and stream methods
+    // pub async fn download<W: AsyncWrite + Unpin>(&self, track: &Track, mut writer: W) -> Result<usize> {
+    //     use reqwest::header::LOCATION;
+    //
+    //     if !track.downloadable || !track.download_url.is_some() {
+    //         return Err(Error::TrackNotDownloadable);
+    //     }
+    //
+    //     let url = self.parse_url(track.download_url.as_ref().unwrap());
+    //     let mut response = self.http_client.get(url).send().await?;
+    //
+    //     // Follow the redirect just this once.
+    //     if let Some(header) = response.headers().get(LOCATION).cloned() {
+    //         let url = Url::parse(header.to_str()?).unwrap();
+    //         response = self.http_client.get(url).send().await?;
+    //     }
+    //     let mut reader = response.bytes_stream().into_async_read();
+    //
+    //     futures::io::copy(&mut reader, &mut writer).await.map(|n| Ok(n as usize))?
+    // }
+    //
+    // /// Starts streaming the track provided in the tracks `stream_url` to the `writer` if the track
+    // /// is streamable via the API.
+    // pub async fn stream<W: AsyncWrite + Unpin>(&self, track: &Track, mut writer: W) -> Result<usize> {
+    //     use reqwest::header::LOCATION;
+    //
+    //     if !track.streamable || !track.stream_url.is_some() {
+    //         return Err(Error::TrackNotStreamable);
+    //     }
+    //
+    //     let url = self.parse_url(track.stream_url.as_ref().unwrap());
+    //     let mut response = self.http_client.get(url).send().await?;
+    //
+    //     // Follow the redirect just this once.
+    //     if let Some(header) = response.headers().get(LOCATION).cloned() {
+    //         let url = Url::parse(header.to_str()?).unwrap();
+    //         response = self.http_client.get(url).send().await?;
+    //     }
+    //
+    //     futures::io::copy(&mut response, &mut writer).await.map(|n| Ok(n as usize))?
+    // }
 
     /// Resolves any soundcloud resource and returns it as a `Url`.
-    pub fn resolve(&self, url: &str) -> Result<Url> {
+    pub async fn resolve(&self, url: &str) -> Result<Url> {
         use reqwest::header::LOCATION;
-        let response = self.get("/resolve", Some(&[("url", url)]))?;
+        let response = self.get("/resolve", Some(&[("url", url)])).await?;
 
         if let Some(header) = response.headers().get(LOCATION) {
             Ok(Url::parse(header.to_str()?).unwrap())
@@ -166,10 +167,13 @@ impl Client {
     /// ```
     /// use soundcloud::Client;
     ///
-    /// let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
-    /// let track = client.track(262681089).get();
+    /// #[tokio::main]
+    /// async fn main() {
+    ///   let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
+    ///   let track = client.track(262681089).get().await;
     ///
-    /// assert_eq!(track.unwrap().id, 262681089);
+    ///   assert_eq!(track.unwrap().id, 262681089);
+    /// }
     /// ```
     pub fn track(&self, id: usize) -> SingleTrackRequestBuilder {
         SingleTrackRequestBuilder::new(self, id)
@@ -182,10 +186,13 @@ impl Client {
     /// ```
     /// use soundcloud::Client;
     ///
-    /// let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
-    /// let tracks = client.tracks().genres(Some(["HipHop"])).get();
+    /// #[tokio::main]
+    /// async fn main() {
+    ///   let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
+    ///   let tracks = client.tracks().genres(Some(["HipHop"])).get().await;
     ///
-    /// assert!(tracks.unwrap().expect("no tracks found").len() > 0);
+    ///   assert!(tracks.unwrap().expect("no tracks found").len() > 0);
+    /// }
     /// ```
     pub fn tracks(&self) -> TrackRequestBuilder {
         TrackRequestBuilder::new(self)
@@ -198,10 +205,13 @@ impl Client {
     /// ```
     /// use soundcloud::Client;
     ///
-    /// let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
-    /// let playlist = client.playlist(965640322).get();
+    /// #[tokio::main]
+    /// async fn main() {
+    ///   let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
+    ///   let playlist = client.playlist(965640322).get().await;
     ///
-    /// assert_eq!(playlist.unwrap().id, 965640322);
+    ///   assert_eq!(playlist.unwrap().id, 965640322);
+    /// }
     /// ```
     pub fn playlist(&self, id: usize) -> SinglePlaylistRequestBuilder {
         SinglePlaylistRequestBuilder::new(self, id)
@@ -214,26 +224,29 @@ impl Client {
     /// ```
     /// use soundcloud::Client;
     ///
-    /// let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
-    /// let playlists = client.playlists().query("Monstercat").get();
+    /// #[tokio::main]
+    /// async fn main() {
+    ///   let client = Client::new(env!("SOUNDCLOUD_CLIENT_ID"));
+    ///   let playlists = client.playlists().query("Monstercat").get().await;
     ///
-    /// assert!(playlists.unwrap().expect("no playlists found").len() > 0);
+    ///   assert!(playlists.unwrap().expect("no playlists found").len() > 0);
+    /// }
     /// ```
     pub fn playlists(&self) -> PlaylistRequestBuilder {
         PlaylistRequestBuilder::new(self)
     }
 
-    pub fn user_playlists(&self) -> Result<Vec<Playlist>> {
+    pub async fn user_playlists(&self) -> Result<Vec<Playlist>> {
         let params = Some(vec![("limit", "500")]);
-        let res = self.get("/me/playlists", params)?;
-        let playlists: Vec<Playlist> = serde_json::from_reader(res)?;
+        let res = self.get("/me/playlists", params).await?;
+        let playlists: Vec<Playlist> = res.json().await?;
         Ok(playlists)
     }
 
-    pub fn likes(&self) -> Result<Vec<Track>> {
+    pub async fn likes(&self) -> Result<Vec<Track>> {
         let params = Some(vec![("limit", "500")]);
-        let res = self.get("/me/favorites", params)?;
-        let likes: Vec<Track> = serde_json::from_reader(res)?;
+        let res = self.get("/me/favorites", params).await?;
+        let likes: Vec<Track> = res.json().await?;
         Ok(likes)
     }
 
@@ -248,87 +261,93 @@ impl Client {
 #[cfg(test)]
 mod tests {
     use url::Url;
+
     use super::*;
 
     fn client() -> Client {
         Client::new(env!("SOUNDCLOUD_CLIENT_ID"))
     }
 
-    #[test]
-    fn test_fetch_playlists() {
+    fn authenticated_client() -> Client {
         let mut client = client();
         client.authenticate_with_token(env!("SOUNDCLOUD_AUTH_TOKEN").to_owned());
-        assert!(client.user_playlists().unwrap().len() > 0);
+
+        client
     }
 
-    #[test]
-    fn test_fetch_likes() {
-        let mut client = client();
-        client.authenticate_with_token(env!("SOUNDCLOUD_AUTH_TOKEN").to_owned());
-        assert!(client.likes().unwrap().len() > 0);
+    #[tokio::test]
+    async fn test_fetch_playlists() {
+        let mut client = authenticated_client();
+        assert!(client.user_playlists().await.unwrap().len() > 0);
     }
 
-    #[test]
-    fn test_resolve_track() {
-        let result = client().resolve("https://soundcloud.com/djmaksgermany/invites-feat-maks-warm-up-mix");
+    #[tokio::test]
+    async fn test_fetch_likes() {
+        let mut client = authenticated_client();
+        assert!(client.likes().await.unwrap().len() > 0);
+    }
+
+    #[tokio::test]
+    async fn test_resolve_track() {
+        let result = client().resolve("https://soundcloud.com/djmaksgermany/invites-feat-maks-warm-up-mix").await;
 
         assert_eq!(result.unwrap(),
-            Url::parse(&format!("https://api.soundcloud.com/tracks/330733497?client_id={}",
-                                env!("SOUNDCLOUD_CLIENT_ID"))).unwrap());
+                   Url::parse(&format!("https://api.soundcloud.com/tracks/330733497?client_id={}",
+                                       env!("SOUNDCLOUD_CLIENT_ID"))).unwrap());
     }
 
-    #[test]
-    fn test_get_tracks() {
-        let result = client().tracks().query(Some("monstercat")).get();
+    #[tokio::test]
+    async fn test_get_tracks() {
+        let result = client().tracks().query(Some("monstercat")).get().await;
 
         assert!(result.unwrap().is_some());
     }
 
-    #[test]
-    fn test_get_track() {
-        let track = client().tracks().id(18201932).get().unwrap();
+    #[tokio::test]
+    async fn test_get_track() {
+        let track = client().tracks().id(18201932).get().await.unwrap();
 
         assert_eq!(track.id, 18201932);
     }
 
-    #[test]
-    fn test_get_playlists() {
-        let result = client().playlists().query("monstercat").get();
+    #[tokio::test]
+    async fn test_get_playlists() {
+        let result = client().playlists().query("monstercat").get().await;
 
         assert!(result.unwrap().is_some());
     }
 
-    #[test]
-    fn test_get_playlist() {
-        let playlist = client().playlist(965640322).get().unwrap();
+    #[tokio::test]
+    async fn test_get_playlist() {
+        let playlist = client().playlist(965640322).get().await.unwrap();
 
         assert_eq!(playlist.id, 965640322);
     }
-
-    #[test]
-    fn test_download_track() {
-        use std::fs;
-        use std::path::Path;
-
-        let client = client();
-        let path = Path::new("hi.mp3");
-        let track = client.tracks().id(263801976).get().unwrap();
-        let mut file = fs::File::create(path).unwrap();
-        let ret = client.download(&track, &mut file);
-
-        assert!(ret.unwrap() > 0);
-        fs::remove_file(path).unwrap();
-    }
-
-    #[test]
-    fn test_stream_track() {
-        use std::io::BufWriter;
-        let client = client();
-        let track = client.tracks().id(262681089).get().unwrap();
-        let mut buffer = BufWriter::new(vec![]);
-        let len = client.stream(&track, &mut buffer);
-
-        assert!(len.unwrap() > 0);
-        assert!(buffer.get_ref().len() > 0);
-    }
+    //
+    // #[tokio::test]
+    // async fn test_download_track() {
+    //     use std::fs;
+    //     use std::path::Path;
+    //
+    //     let client = client();
+    //     let path = Path::new("hi.mp3");
+    //     let track = client.tracks().id(263801976).get().await.unwrap();
+    //     let mut file = fs::File::create(path).unwrap();
+    //     let ret = client.download(&track, &mut file).await;
+    //
+    //     assert!(ret.unwrap() > 0);
+    //     fs::remove_file(path).unwrap();
+    // }
+    //
+    // #[tokio::test]
+    // async fn test_stream_track() {
+    //     use std::io::BufWriter;
+    //     let client = client();
+    //     let track = client.tracks().id(262681089).get().await.unwrap();
+    //     let mut buffer = BufWriter::new(vec![]);
+    //     let len = client.stream(&track, &mut buffer).await;
+    //
+    //     assert!(len.unwrap() > 0);
+    //     assert!(buffer.get_ref().len() > 0);
+    // }
 }

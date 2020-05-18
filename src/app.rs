@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 /// Registered client application.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct App {

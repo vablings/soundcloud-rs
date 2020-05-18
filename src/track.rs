@@ -10,19 +10,19 @@
 use std::fmt;
 use std::str;
 
+use serde::{Deserialize, Serialize};
 use url::Url;
-use serde_json;
 
-use error::{Error, Result};
-use client::Client;
-use user::User;
-use app::App;
+use crate::app::App;
+use crate::client::Client;
+use crate::error::{Error, Result};
+use crate::user::User;
 
 #[derive(Debug)]
 pub enum Filter {
     All,
     Public,
-    Private
+    Private,
 }
 
 impl str::FromStr for Filter {
@@ -183,10 +183,10 @@ impl<'a> SingleTrackRequestBuilder<'a> {
     }
 
     /// Sends the request and return the tracks.
-    pub fn get(&mut self) -> Result<Track> {
+    pub async fn get(&mut self) -> Result<Track> {
         let no_params: Option<&[(&str, &str)]> = None;
-        let response = try!(self.client.get(&format!("/tracks/{}", self.id), no_params));
-        let track: Track = try!(serde_json::from_reader(response));
+        let response = self.client.get(&format!("/tracks/{}", self.id), no_params).await?;
+        let track: Track = response.json().await?;
 
         Ok(track)
     }
@@ -270,20 +270,20 @@ impl<'a> TrackRequestBuilder<'a> {
 
     /// Performs the request and returns a list of tracks if there are any results, None otherwise,
     /// or an error if one occurred.
-    pub fn get(&mut self) -> Result<Option<Vec<Track>>> {
+    pub async fn get(&mut self) -> Result<Option<Vec<Track>>> {
         use serde_json::Value;
 
-        let response = try!(self.client.get("/tracks", Some(self.request_params())));
-        let track_list: Value = try!(serde_json::from_reader(response));
+        let response = self.client.get("/tracks", Some(self.request_params())).await?;
+        let track_list: Value = response.json().await?;
 
         if let Some(track_list) = track_list.as_array() {
             if track_list.is_empty() {
                 return Ok(None);
             } else {
-               let tracks: Vec<Track> = track_list
+                let tracks: Vec<Track> = track_list
                     .iter().map(|t| serde_json::from_value::<Track>(t.clone()).unwrap()).collect();
 
-                return Ok(Some(tracks)); 
+                return Ok(Some(tracks));
             }
         }
 
