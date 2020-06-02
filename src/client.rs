@@ -15,6 +15,7 @@ use url::Url;
 use crate::error::{Error, Result};
 use crate::playlist::{Playlist, PlaylistRequestBuilder, SinglePlaylistRequestBuilder};
 use crate::track::{SingleTrackRequestBuilder, Track, TrackRequestBuilder};
+use crate::User;
 
 #[derive(Debug)]
 pub struct Client {
@@ -236,7 +237,8 @@ impl Client {
         PlaylistRequestBuilder::new(self)
     }
 
-    pub async fn user_playlists(&self) -> Result<Vec<Playlist>> {
+    /// Returns list of playlists of the authenticated user
+    pub async fn my_playlists(&self) -> Result<Vec<Playlist>> {
         let params = Some(vec![("limit", "500")]);
         let res = self.get("/me/playlists", params).await?;
         let playlists: Vec<Playlist> = res.json().await?;
@@ -248,6 +250,33 @@ impl Client {
         let res = self.get("/me/favorites", params).await?;
         let likes: Vec<Track> = res.json().await?;
         Ok(likes)
+    }
+
+    /// Returns details about the given user
+    pub async fn user(&self, user_id: usize) -> Result<User> {
+        let url = format!("/users/{}", user_id);
+        let res = self.get::<Vec<(&str, &str)>, _, _>(&url, None).await?;
+        let user = res.json().await?;
+
+        Ok(user)
+    }
+
+    /// Returns list of playlists of the given user
+    pub async fn user_playlists(&self, user_id: usize) -> Result<Vec<Playlist>> {
+        let params = Some(vec![("limit", "100")]);
+        let url = format!("/users/{}/playlists", user_id);
+        let res = self.get(&url, params).await?;
+        let playlists: Vec<Playlist> = res.json().await?;
+        Ok(playlists)
+    }
+
+    /// Returns list of tracks uploaded by the given user
+    pub async fn user_tracks(&self, user_id: usize) -> Result<Vec<Track>> {
+        let params = Some(vec![("limit", "500")]);
+        let url = format!("/users/{}/tracks", user_id);
+        let res = self.get(&url, params).await?;
+        let tracks = res.json().await?;
+        Ok(tracks)
     }
 
     /// Parses a string and returns a url with the client_id query parameter set.
@@ -276,9 +305,9 @@ mod tests {
     }
 
     #[tokio::test]
-    async fn test_fetch_playlists() {
+    async fn test_fetch_my_playlists() {
         let mut client = authenticated_client();
-        assert!(client.user_playlists().await.unwrap().len() > 0);
+        assert!(client.my_playlists().await.unwrap().len() > 0);
     }
 
     #[tokio::test]
@@ -323,6 +352,28 @@ mod tests {
 
         assert_eq!(playlist.id, 965640322);
     }
+
+    #[tokio::test]
+    async fn test_get_user() {
+        let user = client().user(8553751).await.unwrap();
+
+        assert_eq!(user.id, 8553751);
+    }
+
+    #[tokio::test]
+    async fn test_get_user_tracks() {
+        let tracks = client().user_tracks(8553751).await.unwrap();
+
+        assert!(tracks.len() > 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_user_playlists() {
+        let playlists = client().user_playlists(8553751).await.unwrap();
+
+        assert!(playlists.len() > 0);
+    }
+
     //
     // #[tokio::test]
     // async fn test_download_track() {
