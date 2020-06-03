@@ -1,6 +1,10 @@
 [package]
 name = "soundcloud"
-authors = ["Mikkel Kroman <mk@uplink.io>", "Max Jöhnk <maxjoehnk@gmail.com>"]
+authors = [
+    "Mikkel Kroman <mk@uplink.io>",
+    "Max Jöhnk <maxjoehnk@gmail.com>",
+    "Aaron Enberg, <pastaaroni@gmail.com>"
+]
 version = "0.4.0"
 license = "MIT/Apache-2.0"
 keywords = ["soundcloud", "http", "api", "client"]
@@ -17,4 +21,5 @@ url = "2.1"
 futures = "0.3"
 
 [dev-dependencies]
-tokio = { version = "0.2", features = ["macros", "rt-threaded"]}
+tokio = { version = "0.2", features = ["macros", "rt-threaded", "fs"] }
+tokio-util = { version = "~0.3.0", features = ["compat"] }
