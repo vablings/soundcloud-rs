@@ -16,7 +16,7 @@ use url::Url;
 use crate::error::{Error, Result};
 use crate::playlist::{Playlist, PlaylistRequestBuilder, SinglePlaylistRequestBuilder};
 use crate::track::{SingleTrackRequestBuilder, Track, TrackRequestBuilder};
-use crate::User;
+use crate::user::{SingleUserRequestBuilder, UserRequestBuilder};
 
 #[derive(Debug)]
 pub struct Client {
@@ -104,8 +104,8 @@ impl Client {
             .get(url)
             .headers(headers)
             .send()
-            .await;
-        response
+            .await?;
+        response.error_for_status()
     }
 
     /// Starts streaming the track provided in the track's `stream_url` to the `writer` if the track
@@ -292,6 +292,11 @@ impl Client {
         Ok(playlists)
     }
 
+    /// Returns a builder for searching users
+    pub fn users(&self) -> UserRequestBuilder {
+        UserRequestBuilder::new(self)
+    }
+
     pub async fn likes(&self) -> Result<Vec<Track>> {
         let params = Some(vec![("limit", "500")]);
         let res = self.get("/me/favorites", params).await?;
@@ -300,30 +305,8 @@ impl Client {
     }
 
     /// Returns details about the given user
-    pub async fn user(&self, user_id: usize) -> Result<User> {
-        let url = format!("/users/{}", user_id);
-        let res = self.get::<Vec<(&str, &str)>, _, _>(&url, None).await?;
-        let user = res.json().await?;
-
-        Ok(user)
-    }
-
-    /// Returns list of playlists of the given user
-    pub async fn user_playlists(&self, user_id: usize) -> Result<Vec<Playlist>> {
-        let params = Some(vec![("limit", "100")]);
-        let url = format!("/users/{}/playlists", user_id);
-        let res = self.get(&url, params).await?;
-        let playlists: Vec<Playlist> = res.json().await?;
-        Ok(playlists)
-    }
-
-    /// Returns list of tracks uploaded by the given user
-    pub async fn user_tracks(&self, user_id: usize) -> Result<Vec<Track>> {
-        let params = Some(vec![("limit", "500")]);
-        let url = format!("/users/{}/tracks", user_id);
-        let res = self.get(&url, params).await?;
-        let tracks = res.json().await?;
-        Ok(tracks)
+    pub fn user(&self, user_id: usize) -> SingleUserRequestBuilder {
+        SingleUserRequestBuilder::new(self, user_id)
     }
 
     /// Parses a string and returns a url with the client_id query parameter set.
@@ -432,22 +415,36 @@ mod tests {
 
     #[tokio::test]
     async fn test_get_user() {
-        let user = client().user(8553751).await.unwrap();
+        let user = client().user(8553751).get().await.unwrap();
 
         assert_eq!(user.id, 8553751);
     }
 
     #[tokio::test]
     async fn test_get_user_tracks() {
-        let tracks = client().user_tracks(8553751).await.unwrap();
+        let tracks = client().user(8553751).tracks().await.unwrap().unwrap();
 
         assert!(tracks.len() > 0);
     }
 
     #[tokio::test]
     async fn test_get_user_playlists() {
-        let playlists = client().user_playlists(8553751).await.unwrap();
+        let playlists = client().user(8553751).playlists().await.unwrap().unwrap();
 
         assert!(playlists.len() > 0);
+    }
+
+    #[tokio::test]
+    async fn test_get_user_from_permalink() {
+        let user = client().users().permalink("west1ne").await.unwrap().get().await.unwrap();
+
+        assert_eq!(user.id, 7466893);
+    }
+
+    #[tokio::test]
+    async fn test_get_user_tracks_from_permalink() {
+        let tracks = client().users().permalink("west1ne").await.unwrap().tracks().await;
+
+        assert!(tracks.unwrap().is_some());
     }
 }

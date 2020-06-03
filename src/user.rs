@@ -1,5 +1,10 @@
 use serde::{Deserialize, Serialize};
 
+use crate::client::Client;
+use crate::error::Result;
+use crate::track::Track;
+use crate::playlist::Playlist;
+
 /// Registered user.
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct User {
@@ -47,4 +52,114 @@ pub struct User {
     /// Number of favorited public tracks.
     pub public_favorites_count: Option<usize>,
     // pub avatar_data …
+}
+
+#[derive(Debug)]
+pub struct UserRequestBuilder<'a> {
+    client: &'a Client,
+    query: Option<String>,
+}
+
+#[derive(Debug)]
+pub struct SingleUserRequestBuilder<'a> {
+    client: &'a Client,
+    pub id: usize,
+}
+
+impl<'a> UserRequestBuilder<'a> {
+    /// Creates a new user request builder, with no set parameters.
+    pub fn new(client: &'a Client) -> UserRequestBuilder<'a> {
+        UserRequestBuilder {
+            client,
+            query: None,
+        }
+    }
+
+    /// Sets the search query filter, which will only return tracks with a matching query.
+    pub fn query<S>(&'a mut self, query: Option<S>) -> &mut UserRequestBuilder
+        where S: AsRef<str> {
+        self.query = query.map(|s| s.as_ref().to_owned());
+        self
+    }
+
+    /// Returns a builder for a single track.
+    pub fn id(&self, id: usize) -> SingleUserRequestBuilder {
+        SingleUserRequestBuilder {
+            client: self.client,
+            id,
+        }
+    }
+
+    /// Returns a builder for a single track.
+    pub async fn permalink(&self, permalink: &str) -> Result<SingleUserRequestBuilder<'a>> {
+        let permalink_url = &format!("https://soundcloud.com/{}", permalink);
+        let resource_url = self.client.resolve(permalink_url).await?;
+        let id = resource_url.path_segments()
+            .map(|c| {
+                c.collect::<Vec<_>>()
+            }).unwrap().pop().unwrap();
+        let id = usize::from_str_radix(id, 10).unwrap();
+        Ok(SingleUserRequestBuilder {
+            client: self.client,
+            id,
+        })
+    }
+}
+
+impl<'a> SingleUserRequestBuilder<'a> {
+    /// Creates a new user request builder, with no set parameters.
+    pub fn new(client: &'a Client, id: usize) -> SingleUserRequestBuilder<'a> {
+        SingleUserRequestBuilder {
+            client,
+            id,
+        }
+    }
+
+    /// Retrieve all tracks uploaded by the artist
+    ///
+    /// Returns:
+    ///     a list of tracks if there are any results, None otherwise,
+    ///     or an error if one occurred.
+    pub async fn tracks(&mut self) -> Result<Option<Vec<Track>>> {
+        let path = &format!("/users/{}/tracks", self.id.to_string());
+        let no_params: Option<&[(&str, &str)]> = None;
+        let response = self.client.get(&path, no_params).await?;
+        let tracks: Vec<Track> = response.json().await?;
+        if tracks.is_empty() {
+            Ok(None)
+        }
+        else {
+            Ok(Some(tracks))
+        }
+    }
+
+    /// Retrieve all playlists uploaded by the user
+    ///
+    /// Returns:
+    ///     a list of playlists if there are any results, None otherwise,
+    ///     or an error if one occurred.
+    pub async fn playlists(&mut self) -> Result<Option<Vec<Playlist>>> {
+        let path = format!("/users/{}/playlists", self.id.to_string());
+        let no_params: Option<&[(&str, &str)]> = None;
+        let response = self.client.get(&path, no_params).await?;
+        let playlists: Vec<Playlist> = response.json().await?;
+        if playlists.is_empty() {
+            Ok(None)
+        }
+        else {
+            Ok(Some(playlists))
+        }
+    }
+
+    /// Retrieve a SoundCloud user
+    ///
+    /// Returns:
+    ///     User data in JSON format
+    pub async fn get(&mut self) -> Result<User> {
+        let no_params: Option<&[(&str, &str)]> = None;
+        let response = self.client.get(&format!("/users/{}", self.id), no_params).await?;
+        let user: User = response.json().await?;
+
+        Ok(user)
+    }
 }
