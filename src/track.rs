@@ -164,7 +164,7 @@ pub struct TrackRequestBuilder<'a> {
     duration: Option<(usize, usize)>,
     bpm: Option<(usize, usize)>,
     genres: Option<String>,
-    types: Option<String>
+    types: Option<String>,
 }
 
 #[derive(Debug)]
@@ -176,16 +176,16 @@ pub struct SingleTrackRequestBuilder<'a> {
 impl<'a> SingleTrackRequestBuilder<'a> {
     /// Constructs a new track request.
     pub fn new(client: &'a Client, id: usize) -> SingleTrackRequestBuilder {
-        SingleTrackRequestBuilder {
-            client,
-            id,
-        }
+        SingleTrackRequestBuilder { client, id }
     }
 
     /// Sends the request and return the tracks.
     pub async fn get(&mut self) -> Result<Track> {
         let no_params: Option<&[(&str, &str)]> = None;
-        let response = self.client.get(&format!("/tracks/{}", self.id), no_params).await?;
+        let response = self
+            .client
+            .get(&format!("/tracks/{}", self.id), no_params)
+            .await?;
         let track: Track = response.json().await?;
 
         Ok(track)
@@ -195,7 +195,6 @@ impl<'a> SingleTrackRequestBuilder<'a> {
         Url::parse(&format!("https://{}/tracks/{}", super::API_HOST, self.id)).unwrap()
     }
 }
-
 
 impl<'a> TrackRequestBuilder<'a> {
     /// Creates a new track request builder, with no set parameters.
@@ -216,14 +215,19 @@ impl<'a> TrackRequestBuilder<'a> {
 
     /// Sets the search query filter, which will only return tracks with a matching query.
     pub fn query<S>(&'a mut self, query: Option<S>) -> &mut TrackRequestBuilder
-        where S: AsRef<str> {
+    where
+        S: AsRef<str>,
+    {
         self.query = query.map(|s| s.as_ref().to_owned());
         self
     }
 
     /// Sets the tags filter, which will only return tracks with a matching tag.
     pub fn tags<I, T>(&'a mut self, tags: Option<I>) -> &mut TrackRequestBuilder
-        where I: AsRef<[T]>, T: AsRef<str> {
+    where
+        I: AsRef<[T]>,
+        T: AsRef<str>,
+    {
         self.tags = tags.map(|s| {
             let tags_as_ref: Vec<_> = s.as_ref().iter().map(T::as_ref).collect();
             tags_as_ref.join(",")
@@ -232,7 +236,10 @@ impl<'a> TrackRequestBuilder<'a> {
     }
 
     pub fn genres<I, T>(&'a mut self, genres: Option<I>) -> &mut TrackRequestBuilder
-        where I: AsRef<[T]>, T: AsRef<str> {
+    where
+        I: AsRef<[T]>,
+        T: AsRef<str>,
+    {
         self.genres = genres.map(|s| {
             let genres_as_ref: Vec<_> = s.as_ref().iter().map(T::as_ref).collect();
             genres_as_ref.join(",")
@@ -271,16 +278,23 @@ impl<'a> TrackRequestBuilder<'a> {
     pub async fn get(&mut self) -> Result<Vec<Track>> {
         use serde_json::Value;
 
-        let response = self.client.get("/tracks", Some(self.request_params())).await?;
+        let response = self
+            .client
+            .get("/tracks", Some(self.request_params()))
+            .await?;
         let track_list: Value = response.json().await?;
 
         if let Some(track_list) = track_list.as_array() {
             let tracks: Vec<Track> = track_list
-                .iter().map(|t| serde_json::from_value::<Track>(t.clone()).unwrap()).collect();
+                .iter()
+                .map(|t| serde_json::from_value::<Track>(t.clone()).unwrap())
+                .collect();
 
             Ok(tracks)
-        }else {
-            Err(Error::ApiError("expected response to be an array".to_owned()))
+        } else {
+            Err(Error::ApiError(
+                "expected response to be an array".to_owned(),
+            ))
         }
     }
 

@@ -9,7 +9,7 @@ use crate::user::User;
 #[derive(Debug, Clone, Deserialize)]
 pub enum PlaylistKind {
     #[serde(rename = "playlist")]
-    Playlist
+    Playlist,
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -54,23 +54,28 @@ pub struct SinglePlaylistRequestBuilder<'a> {
 impl<'a> SinglePlaylistRequestBuilder<'a> {
     /// Constructs a new track request.
     pub fn new(client: &'a Client, id: usize) -> SinglePlaylistRequestBuilder {
-        SinglePlaylistRequestBuilder {
-            client,
-            id,
-        }
+        SinglePlaylistRequestBuilder { client, id }
     }
 
     /// Sends the request and return the tracks.
     pub async fn get(&mut self) -> Result<Playlist> {
         let no_params: Option<&[(&str, &str)]> = None;
-        let response = self.client.get(&format!("/playlists/{}", self.id), no_params).await?;
+        let response = self
+            .client
+            .get(&format!("/playlists/{}", self.id), no_params)
+            .await?;
         let track: Playlist = response.json().await?;
 
         Ok(track)
     }
 
     pub fn request_url(&self) -> Url {
-        Url::parse(&format!("https://{}/playlists/{}", super::API_HOST, self.id)).unwrap()
+        Url::parse(&format!(
+            "https://{}/playlists/{}",
+            super::API_HOST,
+            self.id
+        ))
+        .unwrap()
     }
 }
 
@@ -85,7 +90,9 @@ impl<'a> PlaylistRequestBuilder<'a> {
 
     /// Sets the search query filter, which will only return playlists with a matching query.
     pub fn query<S>(&'a mut self, query: S) -> &mut Self
-        where S: AsRef<str> {
+    where
+        S: AsRef<str>,
+    {
         self.query = Some(query.as_ref().to_owned());
         self
     }
@@ -102,16 +109,23 @@ impl<'a> PlaylistRequestBuilder<'a> {
     pub async fn get(&mut self) -> Result<Vec<Playlist>> {
         use serde_json::Value;
 
-        let response = self.client.get("/playlists", Some(self.request_params())).await?;
+        let response = self
+            .client
+            .get("/playlists", Some(self.request_params()))
+            .await?;
         let playlist_list: Value = response.json().await?;
 
         if let Some(playlist_list) = playlist_list.as_array() {
             let playlists: Vec<Playlist> = playlist_list
-                .iter().map(|p| serde_json::from_value::<Playlist>(p.clone()).unwrap()).collect();
+                .iter()
+                .map(|p| serde_json::from_value::<Playlist>(p.clone()).unwrap())
+                .collect();
 
             Ok(playlists)
-        }else {
-            Err(Error::ApiError("expected response to be an array".to_owned()))
+        } else {
+            Err(Error::ApiError(
+                "expected response to be an array".to_owned(),
+            ))
         }
     }
 
