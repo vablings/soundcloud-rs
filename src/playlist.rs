@@ -55,7 +55,7 @@ pub struct Playlist {
     #[serde(default)]
     pub tracks: Option<Vec<Track>>,
     pub user: User,
-    pub artwork_url: Option<String>
+    pub artwork_url: Option<String>,
 }
 
 #[derive(Debug)]

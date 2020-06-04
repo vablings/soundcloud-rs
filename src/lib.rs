@@ -15,8 +15,8 @@ pub use crate::app::App;
 pub use crate::client::Client;
 pub use crate::error::Error;
 // Re-export commonly used resources.
-pub use crate::playlist::*;
 pub use crate::comment::*;
+pub use crate::playlist::*;
 pub use crate::track::*;
 pub use crate::user::*;
 
