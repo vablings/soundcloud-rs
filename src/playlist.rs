@@ -6,7 +6,7 @@ use crate::error::{Error, Result};
 use crate::track::Track;
 use crate::user::User;
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
 pub enum PlaylistType {
     Single,
@@ -23,13 +23,13 @@ impl Default for PlaylistType {
     }
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub enum PlaylistKind {
     #[serde(rename = "playlist")]
     Playlist,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 pub enum PlaylistSharing {
     #[serde(rename = "public")]
     Public,
