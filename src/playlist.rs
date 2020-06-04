@@ -7,6 +7,23 @@ use crate::track::Track;
 use crate::user::User;
 
 #[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum PlaylistType {
+    Single,
+    Album,
+    Ep,
+    Compilation,
+    #[serde(other)]
+    Playlist,
+}
+
+impl Default for PlaylistType {
+    fn default() -> Self {
+        PlaylistType::Playlist
+    }
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub enum PlaylistKind {
     #[serde(rename = "playlist")]
     Playlist,
@@ -26,6 +43,7 @@ pub struct Playlist {
     pub release_day: Option<i32>,
     pub permalink_url: String,
     pub permalink: String,
+    pub playlist_type: Option<PlaylistType>,
     pub purchase_url: Option<String>,
     pub description: Option<String>,
     pub uri: String,
