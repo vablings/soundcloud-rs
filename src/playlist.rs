@@ -1,10 +1,11 @@
+use futures::stream::BoxStream;
 use serde::Deserialize;
-use url::Url;
 
 use crate::client::Client;
 use crate::error::{Error, Result};
 use crate::track::Track;
 use crate::user::User;
+use crate::streaming_api::StreamingApi;
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
 #[serde(rename_all = "lowercase")]
@@ -87,15 +88,6 @@ impl<'a> SinglePlaylistRequestBuilder<'a> {
 
         Ok(track)
     }
-
-    pub fn request_url(&self) -> Url {
-        Url::parse(&format!(
-            "https://{}/playlists/{}",
-            super::API_HOST,
-            self.id
-        ))
-        .unwrap()
-    }
 }
 
 impl<'a> PlaylistRequestBuilder<'a> {
@@ -156,5 +148,30 @@ impl<'a> PlaylistRequestBuilder<'a> {
         }
 
         result
+    }
+}
+
+/// Provides access to operations available for a user's playlists
+pub struct Playlists {
+    client: Client,
+    user_id: usize,
+}
+
+impl StreamingApi for Playlists {
+    type Model = Playlist;
+
+    fn path(&self) -> String {
+        format!("/users/{}/playlists", self.user_id)
+    }
+
+    fn get_stream(&self, url: &str, pages: Option<u64>) -> BoxStream<'_, Result<Self::Model>> {
+        self.client.get_stream(url, pages)
+    }
+}
+
+impl Playlists {
+    /// create a new instance of a souncloud user's playlists
+    pub fn new(client: Client, user_id: usize) -> Self {
+        Playlists { client, user_id }
     }
 }

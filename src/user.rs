@@ -1,10 +1,14 @@
+use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
 
 use crate::client::Client;
+use crate::comment::Comments;
 use crate::error::Result;
-use crate::playlist::Playlist;
-use crate::track::Track;
+use crate::playlist::Playlists;
+use crate::track::{Track, Tracks};
+use crate::web_profile::WebProfiles;
 use crate::Error;
+use crate::streaming_api::StreamingApi;
 
 /// Registered user.
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -85,7 +89,7 @@ impl<'a> UserRequestBuilder<'a> {
         self
     }
 
-    /// Returns a builder for a single track.
+    /// Returns a builder for a user request
     pub fn id(&self, id: usize) -> SingleUserRequestBuilder {
         SingleUserRequestBuilder {
             client: self.client,
@@ -93,7 +97,11 @@ impl<'a> UserRequestBuilder<'a> {
         }
     }
 
-    /// Returns a builder for a single track.
+    /// Creates a user request builder by resolving a user's unique permalink to
+    /// their user id.
+    ///
+    /// Returns:
+    ///     a builder for a user request
     pub async fn permalink(&self, permalink: &str) -> Result<SingleUserRequestBuilder<'a>> {
         let permalink_url = &format!("https://soundcloud.com/{}", permalink);
         let resource_url = self.client.resolve(permalink_url).await?;
@@ -151,30 +159,60 @@ impl<'a> SingleUserRequestBuilder<'a> {
         SingleUserRequestBuilder { client, id }
     }
 
-    /// Retrieve all tracks uploaded by the artist
+    /// Retrieve all tracks uploaded by the user
     ///
     /// Returns:
-    ///     a list of tracks or an error if one occurred.
-    pub async fn tracks(&mut self) -> Result<Vec<Track>> {
-        let path = &format!("/users/{}/tracks", self.id.to_string());
-        let no_params: Option<&[(&str, &str)]> = None;
-        let response = self.client.get(&path, no_params).await?;
-        let tracks: Vec<Track> = response.json().await?;
+    ///     an instance of Tracks
+    pub fn tracks(&self) -> Tracks {
+        Tracks::new(self.client.clone(), self.id)
+    }
 
-        Ok(tracks)
+    /// Retrieve all tracks liked by the user
+    ///
+    /// Returns:
+    ///     an instance of Likes
+    pub fn likes(&mut self) -> Likes {
+        Likes::new(self.client.clone(), self.id)
     }
 
     /// Retrieve all playlists uploaded by the user
     ///
     /// Returns:
-    ///     a list of playlists or an error if one occurred.
-    pub async fn playlists(&mut self) -> Result<Vec<Playlist>> {
-        let path = format!("/users/{}/playlists", self.id.to_string());
-        let no_params: Option<&[(&str, &str)]> = None;
-        let response = self.client.get(&path, no_params).await?;
-        let playlists: Vec<Playlist> = response.json().await?;
+    ///     an instance of Playlists
+    pub fn playlists(&mut self) -> Playlists {
+        Playlists::new(self.client.clone(), self.id)
+    }
 
-        Ok(playlists)
+    /// Retrieve all comments for this user
+    ///
+    /// Returns:
+    ///     an instance of Comments
+    pub fn comments(&mut self) -> Comments {
+        Comments::user(self.client.clone(), self.id)
+    }
+
+    /// Retrieve all users this user follows
+    ///
+    /// Returns:
+    ///     an instance of Followings
+    pub fn followings(&mut self) -> Followings {
+        Followings::new(self.client.clone(), self.id)
+    }
+
+    /// Retrieve all this user's followers
+    ///
+    /// Returns:
+    ///     an instance of Followers
+    pub fn followers(&mut self) -> Followers {
+        Followers::new(self.client.clone(), self.id)
+    }
+
+    /// Retrieve all this user's web profiles
+    ///
+    /// Returns:
+    ///     an instance of WebProfiles
+    pub fn web_profiles(&mut self) -> WebProfiles {
+        WebProfiles::new(self.client.clone(), self.id)
     }
 
     /// Retrieve a SoundCloud user
@@ -190,5 +228,80 @@ impl<'a> SingleUserRequestBuilder<'a> {
         let user: User = response.json().await?;
 
         Ok(user)
+    }
+}
+
+/// Provides access to operations available for a user's liked tracks
+pub struct Likes {
+    client: Client,
+    user_id: usize,
+}
+
+impl Likes {
+    /// create a new instance of a souncloud user's likes
+    pub fn new(client: Client, user_id: usize) -> Self {
+        Likes { client, user_id }
+    }
+}
+
+impl StreamingApi for Likes {
+    type Model = Track;
+
+    fn path(&self) -> String {
+        format!("/users/{}/favorites", self.user_id)
+    }
+
+    fn get_stream(&self, url: &str, pages: Option<u64>) -> BoxStream<'_, Result<Self::Model>> {
+        self.client.get_stream(url, pages)
+    }
+}
+
+/// Provides access to operations available for a user's followings
+pub struct Followings {
+    client: Client,
+    user_id: usize,
+}
+
+impl Followings {
+    /// create a new instance of a souncloud user's followings
+    pub fn new(client: Client, user_id: usize) -> Self {
+        Followings { client, user_id }
+    }
+}
+
+impl StreamingApi for Followings {
+    type Model = User;
+
+    fn path(&self) -> String {
+        format!("/users/{}/followings", self.user_id)
+    }
+
+    fn get_stream(&self, url: &str, pages: Option<u64>) -> BoxStream<'_, Result<Self::Model>> {
+        self.client.get_stream(url, pages)
+    }
+}
+
+/// Provides access to operations available for a user's followers
+pub struct Followers {
+    client: Client,
+    user_id: usize,
+}
+
+impl Followers {
+    /// create a new instance of a souncloud user's followers
+    pub fn new(client: Client, user_id: usize) -> Self {
+        Followers { client, user_id }
+    }
+}
+
+impl StreamingApi for Followers {
+    type Model = User;
+
+    fn path(&self) -> String {
+        format!("/users/{}/followers", self.user_id)
+    }
+
+    fn get_stream(&self, url: &str, pages: Option<u64>) -> BoxStream<'_, Result<Self::Model>> {
+        self.client.get_stream(url, pages)
     }
 }

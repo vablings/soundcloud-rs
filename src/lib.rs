@@ -13,20 +13,26 @@
 
 pub use crate::app::App;
 pub use crate::client::Client;
-pub use crate::error::Error;
+pub use crate::error::{Error, Result};
 // Re-export commonly used resources.
 pub use crate::comment::*;
+pub use crate::page::*;
 pub use crate::playlist::*;
 pub use crate::track::*;
 pub use crate::user::*;
+pub use crate::web_profile::*;
+pub use crate::streaming_api::StreamingApiExt;
 
 /// The static host address for the API.
-pub const API_HOST: &str = "api.soundcloud.com";
+pub const API_HOST: &str = "https://api.soundcloud.com";
 
 mod app;
 mod client;
 mod comment;
 pub mod error;
+mod page;
 mod playlist;
 mod track;
 mod user;
+mod web_profile;
+mod streaming_api;

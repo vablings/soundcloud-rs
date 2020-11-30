@@ -3,7 +3,7 @@ name = "soundcloud"
 authors = [
     "Mikkel Kroman <mk@uplink.io>",
     "Max Jöhnk <maxjoehnk@gmail.com>",
-    "Aaron Enberg, <pastaaroni@gmail.com>"
+    "Aaron Enberg <aaronenberg@gmail.com>"
 ]
 version = "0.4.0"
 license = "MIT/Apache-2.0"
@@ -21,7 +21,7 @@ is-it-maintained-open-issues = { repository = "https://github.com/maxjoehnk/soun
 maintenance = { status = "actively-developed" }
 
 [dependencies]
-log = "0.3"
+log = "0.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 reqwest = { version = "0.10", features = ["json", "stream"] }

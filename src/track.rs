@@ -10,13 +10,15 @@
 use std::fmt;
 use std::str;
 
+use futures::stream::BoxStream;
 use serde::{Deserialize, Serialize};
-use url::Url;
 
 use crate::app::App;
 use crate::client::Client;
 use crate::error::{Error, Result};
 use crate::user::User;
+use crate::streaming_api::StreamingApi;
+use crate::Comments;
 
 #[derive(Debug)]
 pub enum Filter {
@@ -179,6 +181,30 @@ impl<'a> SingleTrackRequestBuilder<'a> {
         SingleTrackRequestBuilder { client, id }
     }
 
+    /// Retrieve all comments for this track
+    ///
+    /// Returns:
+    ///     an instance of Comments
+    pub fn comments(&mut self) -> Comments {
+        Comments::track(self.client.clone(), self.id)
+    }
+
+    /// Retrieve all tracks related to this track
+    ///
+    /// Returns:
+    ///     an instance of RelatedTracks
+    pub fn related_tracks(&mut self) -> RelatedTracks {
+        RelatedTracks::new(self.client.clone(), self.id)
+    }
+
+    /// Retrieve all soundcloud users that like this track
+    ///
+    /// Returns:
+    ///     an instance of Likers
+    pub fn likers(&mut self) -> Likers {
+        Likers::new(self.client.clone(), self.id)
+    }
+
     /// Sends the request and return the tracks.
     pub async fn get(&mut self) -> Result<Track> {
         let no_params: Option<&[(&str, &str)]> = None;
@@ -189,10 +215,6 @@ impl<'a> SingleTrackRequestBuilder<'a> {
         let track: Track = response.json().await?;
 
         Ok(track)
-    }
-
-    pub fn request_url(&self) -> Url {
-        Url::parse(&format!("https://{}/tracks/{}", super::API_HOST, self.id)).unwrap()
     }
 }
 
@@ -340,5 +362,80 @@ impl<'a> TrackRequestBuilder<'a> {
 impl PartialEq for Track {
     fn eq(&self, other: &Track) -> bool {
         other.id == self.id
+    }
+}
+
+/// Provides access to operations available for a user's tracks
+pub struct Tracks {
+    client: Client,
+    user_id: usize,
+}
+
+impl Tracks {
+    /// create a new instance of a souncloud user's tracks
+    pub fn new(client: Client, user_id: usize) -> Self {
+        Tracks { client, user_id }
+    }
+}
+
+impl StreamingApi for Tracks {
+    type Model = Track;
+
+    fn path(&self) -> String {
+        format!("/users/{}/tracks", self.user_id)
+    }
+
+    fn get_stream(&self, url: &str, pages: Option<u64>) -> BoxStream<'_, Result<Self::Model>> {
+        self.client.get_stream(url, pages)
+    }
+}
+
+/// Provides access to operations available for a track's likers
+pub struct Likers {
+    client: Client,
+    track_id: usize,
+}
+
+impl Likers {
+    /// create a new instance of a souncloud track's likers
+    pub fn new(client: Client, track_id: usize) -> Self {
+        Likers { client, track_id }
+    }
+}
+
+impl StreamingApi for Likers {
+    type Model = User;
+
+    fn path(&self) -> String {
+        format!("/tracks/{}/favoriters", self.track_id)
+    }
+
+    fn get_stream(&self, url: &str, pages: Option<u64>) -> BoxStream<'_, Result<Self::Model>> {
+        self.client.get_stream(url, pages)
+    }
+}
+
+/// Provides access to operations available for a track's related tracks
+pub struct RelatedTracks {
+    client: Client,
+    track_id: usize,
+}
+
+impl RelatedTracks {
+    /// create a new instance of a souncloud track's related tracks
+    pub fn new(client: Client, track_id: usize) -> Self {
+        RelatedTracks { client, track_id }
+    }
+}
+
+impl StreamingApi for RelatedTracks {
+    type Model = Track;
+
+    fn path(&self) -> String {
+        format!("/tracks/{}/related", self.track_id)
+    }
+
+    fn get_stream(&self, url: &str, pages: Option<u64>) -> BoxStream<'_, Result<Self::Model>> {
+        self.client.get_stream(url, pages)
     }
 }
