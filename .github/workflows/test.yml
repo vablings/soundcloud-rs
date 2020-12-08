@@ -1,0 +1,26 @@
+name: test
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+  schedule:
+    - cron: '0 0 * * 0'
+
+jobs:
+  build:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install youtube-dl
+        run: sudo apt install youtube-dl
+      - name: Run Tests
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+        env:
+          SOUNDCLOUD_AUTH_TOKEN: ${{ secrets.SOUNDCLOUD_AUTH_TOKEN }}
+          SOUNDCLOUD_CLIENT_ID: ${{ secrets.SOUNDCLOUD_CLIENT_ID }}
