@@ -23,7 +23,7 @@
 // OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 use tokio::fs::File;
-use tokio_util::compat::Tokio02AsyncWriteCompatExt;
+use tokio_util::compat::TokioAsyncWriteCompatExt;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {

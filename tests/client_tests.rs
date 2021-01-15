@@ -73,7 +73,7 @@ async fn test_get_playlist() {
 #[tokio::test]
 async fn test_download() {
     use tokio::fs::{remove_file, File};
-    use tokio_util::compat::Tokio02AsyncWriteCompatExt;
+    use tokio_util::compat::TokioAsyncWriteCompatExt;
 
     let client = client();
     let path = format!("hi.mp3");
@@ -88,7 +88,7 @@ async fn test_download() {
 #[tokio::test]
 async fn test_stream() {
     use tokio::fs::{remove_file, File};
-    use tokio_util::compat::Tokio02AsyncWriteCompatExt;
+    use tokio_util::compat::TokioAsyncWriteCompatExt;
 
     let client = client();
     let path = format!("test.mp3");
