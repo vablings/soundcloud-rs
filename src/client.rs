@@ -178,7 +178,7 @@ impl Client {
     /// use std::path::Path;
     /// use soundcloud::Client;
     /// use tokio::fs::File;
-    /// use tokio_util::compat::Tokio02AsyncWriteCompatExt;
+    /// use tokio_util::compat::TokioAsyncWriteCompatExt;
     ///
     /// #[tokio::main]
     /// async fn main() {
@@ -210,7 +210,7 @@ impl Client {
     /// use std::path::Path;
     /// use soundcloud::Client;
     /// use tokio::fs::File;
-    /// use tokio_util::compat::Tokio02AsyncWriteCompatExt;
+    /// use tokio_util::compat::TokioAsyncWriteCompatExt;
     ///
     /// #[tokio::main]
     /// async fn main() {
