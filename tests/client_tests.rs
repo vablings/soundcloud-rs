@@ -3,6 +3,9 @@ use url::Url;
 use futures::prelude::*;
 use soundcloud::*;
 
+const USER_ID: usize = 31506117;
+const TRACK_ID: usize = 505512390;
+
 fn client() -> Client {
     Client::new(env!("SOUNDCLOUD_CLIENT_ID"))
 }
@@ -34,16 +37,12 @@ async fn test_resolve_track() {
 
     assert_eq!(
         result.unwrap(),
-        Url::parse(&format!(
-            "https://api.soundcloud.com/tracks/330733497?client_id={}",
-            env!("SOUNDCLOUD_CLIENT_ID")
-        ))
-        .unwrap()
+        Url::parse("https://api.soundcloud.com/tracks/330733497").unwrap()
     );
 }
 
 #[tokio::test]
-async fn test_get_tracks() {
+async fn test_search_tracks() {
     let result = client().tracks().query(Some("monstercat")).get().await;
 
     assert!(result.unwrap().len() > 0);
@@ -65,9 +64,9 @@ async fn test_get_playlists() {
 
 #[tokio::test]
 async fn test_get_playlist() {
-    let playlist = client().playlist(965640322).get().await.unwrap();
+    let playlist = client().playlist(565064082).get().await.unwrap();
 
-    assert_eq!(playlist.id, 965640322);
+    assert_eq!(playlist.id, 565064082);
 }
 
 #[tokio::test]
@@ -123,19 +122,19 @@ async fn test_get_users() {
 async fn test_get_user_from_permalink() {
     let user = client()
         .users()
-        .permalink("west1ne")
+        .permalink("djmaksgermany")
         .await
         .unwrap()
         .get()
         .await
         .unwrap();
 
-    assert_eq!(user.id, 7466893);
+    assert_eq!(user.id, USER_ID);
 }
 
 #[tokio::test]
 async fn test_get_first_page_user_tracks() {
-    let tracks = client().user(7466893).tracks();
+    let tracks = client().user(USER_ID).tracks();
     let tracks: Vec<Track> = tracks
         .get(Default::default(), 1)
         .try_collect()
@@ -147,7 +146,7 @@ async fn test_get_first_page_user_tracks() {
 
 #[tokio::test]
 async fn test_paginate_user_tracks() {
-    let tracks = client().user(7466893).tracks();
+    let tracks = client().user(USER_ID).tracks();
     let tracks: Vec<Track> = tracks.iter(Default::default()).try_collect().await.unwrap();
 
     assert!(tracks.len() > 0);
@@ -155,7 +154,7 @@ async fn test_paginate_user_tracks() {
 
 #[tokio::test]
 async fn test_user_web_profile() {
-    let profiles = client().user(7466893).web_profiles();
+    let profiles = client().user(USER_ID).web_profiles();
     let profiles: Vec<WebProfile> = profiles
         .iter(Default::default())
         .try_collect()
@@ -167,7 +166,7 @@ async fn test_user_web_profile() {
 
 #[tokio::test]
 async fn test_user_playlists() {
-    let playlists = client().user(7466893).playlists();
+    let playlists = client().user(USER_ID).playlists();
     let playlists: Vec<Playlist> = playlists
         .iter(Default::default())
         .try_collect()
@@ -178,20 +177,8 @@ async fn test_user_playlists() {
 }
 
 #[tokio::test]
-async fn test_user_comments() {
-    let comments = client().user(7466893).comments();
-    let comments: Vec<Comment> = comments
-        .iter(Default::default())
-        .try_collect()
-        .await
-        .unwrap();
-
-    assert!(comments.len() > 0);
-}
-
-#[tokio::test]
 async fn test_user_followings() {
-    let followings = client().user(7466893).followings();
+    let followings = client().user(USER_ID).followings();
     let users: Vec<User> = followings
         .iter(Default::default())
         .take(50)
@@ -204,7 +191,7 @@ async fn test_user_followings() {
 
 #[tokio::test]
 async fn test_user_followers() {
-    let followers = client().user(7466893).followers();
+    let followers = client().user(USER_ID).followers();
     let users: Vec<User> = followers
         .iter(Default::default())
         .take(50)
@@ -217,7 +204,7 @@ async fn test_user_followers() {
 
 #[tokio::test]
 async fn test_user_likes() {
-    let likes = client().user(7466893).likes();
+    let likes = client().user(USER_ID).likes();
     let tracks: Vec<Track> = likes
         .iter(Default::default())
         .take(50)
@@ -230,7 +217,7 @@ async fn test_user_likes() {
 
 #[tokio::test]
 async fn test_track_comments() {
-    let comments = client().track(263801976).comments();
+    let comments = client().track(TRACK_ID).comments();
     let comments: Vec<Comment> = comments
         .iter(Default::default())
         .take(50)
@@ -243,7 +230,7 @@ async fn test_track_comments() {
 
 #[tokio::test]
 async fn test_track_likers() {
-    let likers = client().track(263801976).likers();
+    let likers = client().track(TRACK_ID).likers();
     let users: Vec<User> = likers
         .iter(Default::default())
         .take(50)
@@ -256,7 +243,7 @@ async fn test_track_likers() {
 
 #[tokio::test]
 async fn test_related_tracks() {
-    let related = client().track(263801976).related_tracks();
+    let related = client().track(TRACK_ID).related_tracks();
     let tracks: Vec<Track> = related
         .iter(Default::default())
         .take(30)

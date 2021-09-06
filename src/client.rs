@@ -368,7 +368,7 @@ impl Client {
 
     pub async fn likes(&self) -> Result<Vec<Track>> {
         let params = Some(vec![("limit", "500")]);
-        let res = self.get("/me/favorites", params).await?;
+        let res = self.get("/me/likes/tracks", params).await?;
         let likes: Vec<Track> = res.json().await?;
         Ok(likes)
     }

@@ -127,14 +127,6 @@ impl<'a> SingleUserRequestBuilder<'a> {
         Playlists::new(self.client.clone(), self.id)
     }
 
-    /// Retrieve all comments for this user
-    ///
-    /// Returns:
-    ///     an instance of Comments
-    pub fn comments(&mut self) -> Comments {
-        Comments::user(self.client.clone(), self.id)
-    }
-
     /// Retrieve all users this user follows
     ///
     /// Returns:

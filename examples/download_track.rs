@@ -39,7 +39,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .title
             .to_string()
             .replace(&['\"', '.', '\'', '\\', '/', '?', '*'][..], "");
-        let path = format!("{}.{}", track_title, track.original_format.to_string());
+        let path = format!("{}", track_title);
         let mut outfile = File::create(&path).await?.compat_write();
 
         if let Ok(num_bytes) = client.download(track, &mut outfile).await {
